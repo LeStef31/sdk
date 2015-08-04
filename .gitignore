@@ -20,7 +20,6 @@ TAGS
 .project
 .settings/
 # Intellij
-**/.idea
 **/.idea/workspace.xml
 **/.idea/tasks.xml
 **/.idea/libraries

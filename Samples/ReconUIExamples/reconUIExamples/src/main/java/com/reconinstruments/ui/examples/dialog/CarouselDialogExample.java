@@ -4,6 +4,7 @@ import android.support.v4.app.FragmentActivity;
 import android.view.View;
 import android.widget.TextView;
 import com.reconinstruments.ui.carousel.CarouselItem;
+import com.reconinstruments.ui.carousel.CarouselItemFragment;
 import com.reconinstruments.ui.carousel.CarouselViewPager;
 import com.reconinstruments.ui.carousel.StandardCarouselItem;
 import com.reconinstruments.ui.dialog.CarouselDialog;
@@ -55,9 +56,9 @@ public class CarouselDialogExample extends CarouselDialog implements DialogBuild
     public void updateView(View view) {
         TextView titleView = (TextView) view.findViewById(R.id.title);
 
-        StandardCarouselItem item = (StandardCarouselItem) getCarousel().getCurrentCarouselItem();
-        //StandardCarouselItem item = (StandardCarouselItem) itemFragment.getItem();
-        int position = getCarousel().getCurrentItem();//itemFragment.getPosition();
+        CarouselItemFragment itemFragment = getCarousel().getAdapter().getCurrentItem();
+        StandardCarouselItem item = (StandardCarouselItem) itemFragment.getItem();
+        int position = itemFragment.getPosition();
         titleView.setText(item.getTitle());
 
         TextView subtitleView = (TextView) view.findViewById(R.id.subtitle);

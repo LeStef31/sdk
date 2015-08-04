@@ -1,12 +1,10 @@
 package com.reconinstruments.ui.carousel;
 
-import android.app.Activity;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
-import android.support.v4.view.PagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -24,7 +22,6 @@ import com.reconinstruments.ui.UIUtils;
 import com.reconinstruments.ui.breadcrumb.BreadcrumbToast;
 
 import java.lang.reflect.Field;
-import java.util.Arrays;
 import java.util.List;
 
 /*
@@ -37,7 +34,7 @@ public class CarouselViewPager extends ViewPager {
     static final int MIN_NUM_FRAGMENTS_TO_SHOW_BREADCRUMBS = 3;
 
     // Adapter for CarouselItemFragments
-    CarouselPagerViewAdapter mPagerAdapter;
+    CarouselPagerAdapter mPagerAdapter;
 
     // configurable attributes
     // whether to display a horizontal breadcrumb view when the page is changed
@@ -140,7 +137,7 @@ public class CarouselViewPager extends ViewPager {
         });
     }
 
-    public CarouselPagerViewAdapter getCarouselAdapter() {
+    public CarouselPagerAdapter getAdapter() {
         return mPagerAdapter;
     }
 
@@ -159,25 +156,17 @@ public class CarouselViewPager extends ViewPager {
         this.onItemSelectedListener = onItemSelectedListener;
     }
 
-    public CarouselItem getCurrentCarouselItem() {
-        return getCarouselAdapter().getCarouselItem(getCurrentItem());
-    }
-
-    public View getCurrentView() {
-        return getCarouselAdapter().getView(getCurrentItem());
-    }
-
     @Override
     public boolean onKeyUp(int keyCode, KeyEvent event) {
         if(keyCode==KeyEvent.KEYCODE_DPAD_CENTER) {
-            CarouselItem currentItem = getCurrentCarouselItem();
+            CarouselItemFragment currentFragment = getAdapter().getCurrentItem();
+            CarouselItem currentItem = currentFragment.getItem();
             if(animateSelection) {
-                View currentView = getCurrentView();
-                currentView.startAnimation(AnimationUtils.loadAnimation(getContext(),R.anim.carousel_item_push));
+                currentFragment.getView().startAnimation(AnimationUtils.loadAnimation(getContext(),R.anim.carousel_item_push));
             }
             currentItem.onClick(getContext());
             if(onItemSelectedListener!=null) {
-                onItemSelectedListener.onItemSelected(this,currentItem, getCurrentItem());
+                onItemSelectedListener.onItemSelected(this,currentItem, currentFragment.getPosition());
             }
         }
         return super.onKeyUp(keyCode,event);
@@ -187,33 +176,59 @@ public class CarouselViewPager extends ViewPager {
         if(breadcrumbToast!=null)
             breadcrumbToast.updateBreadcrumbs(selection);
 
-        getCarouselAdapter().updateViewForPosition(selection, CarouselItem.POSITION.CENTER);
+        getAdapter().getItem(selection).updateViewForPosition(CarouselItem.POSITION.CENTER);
         if (selection>0)
-            getCarouselAdapter().updateViewForPosition(selection - 1, CarouselItem.POSITION.LEFT);
+            getAdapter().getItem(selection-1).updateViewForPosition(CarouselItem.POSITION.LEFT);
         if (selection<getAdapter().getCount()-1)
-            getCarouselAdapter().updateViewForPosition(selection + 1, CarouselItem.POSITION.RIGHT);
+            getAdapter().getItem(selection+1).updateViewForPosition(CarouselItem.POSITION.RIGHT);
     }
 
-    public void setContents(CarouselItem... items){
-        setContents(Arrays.asList(items));
+    /**
+     * Set the items to be displayed and finish initializing the view
+     * @param fragment parent fragment of this view pager
+     * @param items items to display
+     * @param initialSelection item to be initially selected
+     */
+    public void setContents(Fragment fragment,List<? extends CarouselItem> items,int initialSelection){
+        setContents(fragment.getChildFragmentManager(), fragment.getActivity(), items,initialSelection);
     }
-    public void setContents(List<? extends CarouselItem> items){
-        mPagerAdapter = new CarouselPagerViewAdapter(getContext(),items);
-        initializeContents(items.size());
+    /**
+     * Set the items to be displayed and finish initializing the view
+     * @param fragment parent fragment of this view pager
+     * @param items items to display
+     */
+    public void setContents(Fragment fragment,List<? extends CarouselItem> items){
+        setContents(fragment.getChildFragmentManager(), fragment.getActivity(), items,0);
+    }
+    /**
+     * Set the items to be displayed and finish initializing the view
+     * @param activity fragment activity containing this view pager (only use if there is no child fragment within the
+     *                 activity containing this view)
+     * @param items items to display
+     * @param initialSelection item to be initially selected
+     */
+    public void setContents(FragmentActivity activity,List<? extends CarouselItem> items,int initialSelection){
+        setContents(activity.getSupportFragmentManager(),activity,items,initialSelection);
+    }
+    /**
+     * Set the items to be displayed and finish initializing the view
+     * @param activity fragment activity containing this view pager (only use if there is no child fragment within the
+     *                 activity containing this view)
+     * @param items items to display
+     */
+    public void setContents(FragmentActivity activity,List<? extends CarouselItem> items){
+        setContents(activity.getSupportFragmentManager(), activity, items, 0);
     }
 
-    private void initializeContents(int numItems) {
-        setAdapter((PagerAdapter)mPagerAdapter);
+    private void setContents(FragmentManager fm,FragmentActivity activity,List<? extends CarouselItem> items,int initialSelection){
+        mPagerAdapter = new CarouselPagerAdapter(fm, items, this);
+        setAdapter(mPagerAdapter);
 
-        if(showBreadcrumbs&&numItems>=MIN_NUM_FRAGMENTS_TO_SHOW_BREADCRUMBS) {
-            breadcrumbToast = new BreadcrumbToast(getContext(),breadcrumbContainer,true,numItems);
+        if(showBreadcrumbs&&items.size()>=MIN_NUM_FRAGMENTS_TO_SHOW_BREADCRUMBS) {
+            breadcrumbToast = new BreadcrumbToast(activity,breadcrumbContainer,true,items.size());
         }
-        setSelection(0);
-    }
-
-    public void setSelection(int selection) {
-        setCurrentItem(selection);
-        onPageSelected(selection);
+        setCurrentItem(initialSelection);
+        onPageSelected(initialSelection);
     }
 
     /**
